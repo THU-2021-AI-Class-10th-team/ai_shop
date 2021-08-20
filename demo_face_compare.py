@@ -20,10 +20,10 @@ def compare_faces(source: Path, target: bytes) -> Tuple[float]:
       target: image of customer at entrance
 
     * Return value: (left, top)
-      left: horizontal axis origin point of detected face in the fraction
-            of whole picture
-      top: vertical axis origin point of detected face in the fraction
-            of whole picture
+      left: origin point of horizontal axis of detected face frame in the
+      fraction of whole picture
+      top: origin point of vertical axis of detected face frame in the
+      fraction of whole picture
 
     (left, top)   (left + width, top)
       |              |
