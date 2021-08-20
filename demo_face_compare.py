@@ -11,19 +11,40 @@ from typing import NewType, Tuple, List
 Path = NewType('path', pathlib.Path)
 
 
-def compare_faces(source: Path, target: Path) -> Tuple[float]:
+def compare_faces(source: Path, target: bytes) -> Tuple[float]:
     '''Send pictures and evoke rekognition compare faces service.
 
-    Returns resolved response.
+    * Parameters:
+      source: image of grid of preprocessed customer portraits (set to
+              local file to do demostration)
+      target: image of customer at entrance
+
+    * Return value: (left, top)
+      left: horizontal axis origin point of detected face in the fraction
+            of whole picture
+      top: vertical axis origin point of detected face in the fraction
+            of whole picture
+
+    (left, top)   (left + width, top)
+      |              |
+      v              v
+      +--------------+
+      |              |
+      |              |
+      |   detected   |
+      |     face     |  PS. "width" and "height" are not in this function
+      |    frame     |
+      |              |
+      |              |
+      +--------------+ <--(left + width, top + height)
     '''
     client = boto3.client('rekognition')
 
-    with open(source, 'rb') as imageSource, \
-            open(target, 'rb') as imageTarget:
-                response: dict = client.compare_faces(
+    with open(source, 'rb') as imageSource:
+        response: dict = client.compare_faces(
                 SimilarityThreshold=80,
                 SourceImage={'Bytes': imageSource.read()},
-                TargetImage={'Bytes': imageTarget.read()}
+                TargetImage={'Bytes': target}
                 )
 
     if len(response['FaceMatches']) > 0:
@@ -44,16 +65,22 @@ def face_features() -> List[str]:
     return ['male']
 
 
-def entrance_camera_handler() -> str:
-    '''This function simulates camera shot at entrance.'''
+def entrance_camera_handler() -> bytes:
+    '''This function simulates camera shot at entrance.
+
+    * Return value: image itself
+    '''
 #    TODO: Rewrite it to real handler that returns a binary data.
 #    TODO: It should able to deal with multiple face in one shot
 #          Take look of it:
 #          https://www.superdatascience.com/blogs/opencv-face-recognition
-    return 'fake_users/Bradley_Cooper5.jpeg'
+    with open('fake_users/Bradley_Cooper5.jpeg', 'rb') as img_file:
+        img_data = img_file.read()
+
+    return img_data
 
 
-def resolve_customer(picture: Path, left: float, top: float) -> str:
+def resolve_customer(picture: str, left: float, top: float) -> str:
     '''Figure out who is the customer by the position in source image.
 
     * Parameters:
@@ -97,7 +124,7 @@ def main() -> None:
     group_root: Path = pathlib.Path('fake_users/groups/')
     # TODO: write the argorithm to deal with mutiple features
     features: List[str] = face_features()
-    target_file: bytes = entrance_camera_handler()  # now str, future bytes
+    target_file: bytes = entrance_camera_handler()
 
     # TODO: rewrite this block to multi-threaded to accelerate
     for feature in features:
