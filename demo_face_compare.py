@@ -24,19 +24,22 @@ def compare_faces(source: Path, target: bytes) -> Tuple[float]:
       fraction of whole picture
       top: origin point of vertical axis of detected face frame in the
       fraction of whole picture
-
-    (left, top)   (left + width, top)
-      |              |
-      v              v
-      +--------------+
-      |              |
-      |              |
-      |   detected   |
-      |     face     |  PS. "width" and "height" are not in this function
-      |    frame     |
-      |              |
-      |              |
-      +--------------+ <--(left + width, top + height)
+                                           Whole Picture
+    +---------------------------------------------------+
+    |                                                   |
+    |(left, top)   (left + width, top)                  |
+    |  |              |                                 |
+    |  v              v                                 |
+    |  +--------------+                                 |
+    |  |              |                                 |
+    |  |              |                                 |
+    |  |   detected   |                                 |
+    |  |     face     |  PS. "width" and "height" are   |
+    |  |    frame     |      not in this function       |
+    |  |              |                                 |
+    |  |              |                                 |
+    |  +--------------+ <--(left + width, top + height) |
+    +---------------------------------------------------+
     '''
     client = boto3.client('rekognition')
 
@@ -127,13 +130,22 @@ def fine_tune(frame: tuple) -> Tuple[int]:
     return x, y, dx, dy
 
 
+def get_faces(target_pic: bytes) -> tuple:
+    '''Recognize each faces in target picture and cut them down saparately
+    '''
+    lbp_face_cascade = cv2.CascadeClassifier(
+            'data/lbpcascade_frontalface.xml'
+            )
+    imgarr = np.frombuffer(target_pic, np.uint8)
+    img_np = cv2.imdecode(imgarr, cv2.COLOR_BGR2GRAY)
+    faces = lbp_face_cascade.detectMultiScale(img_np,
+                                              scaleFactor=1.1,
+                                              minNeighbors=5)
+    return img_np, faces
+
+
 def get_face_features(target: bytes) -> List[str]:
     '''Send image to AWS Rekgnition face-detection and extract features.
-
-    We divide the process into 3 parts:
-    1. Recognize each faces in target picture and cut them down saparately
-    2. Send each face to AWS Rekognition face analysis
-    3. Extract infomation in AWS response
 
     * Parameters:
       target: the picture we send to AWS.
@@ -155,33 +167,25 @@ def get_face_features(target: bytes) -> List[str]:
     '''
     client = boto3.client('rekognition')
 
-    lbp_face_cascade = cv2.CascadeClassifier(
-            'data/lbpcascade_frontalface.xml'
-            )
-    imgarr = np.frombuffer(target, np.uint8)
-    img_np = cv2.imdecode(imgarr, cv2.COLOR_BGR2GRAY)
-    faces = lbp_face_cascade.detectMultiScale(img_np,
-                                              scaleFactor=1.1,
-                                              minNeighbors=5)
+    img_np, faces = get_faces(target)
 
     analysis = []
-    if len(faces):  # If there is any face
-        for index, value in enumerate(faces):
-            x, y, delta_x, delta_y = fine_tune(value)
+    for index, value in enumerate(faces):
+        x, y, delta_x, delta_y = fine_tune(value)
 
-            is_success, buffer = cv2.imencode(".png", img_np[y:y+delta_y,
-                                                             x:x+delta_x])
-            io_buf = io.BytesIO(buffer)
+        is_success, buffer = cv2.imencode(".png",
+                                          img_np[y:y+delta_y, x:x+delta_x])
+        io_buf = io.BytesIO(buffer)
+        analysis.append([io_buf])
 
-            analysis.append([io_buf])
-            analysis[index] = analysis[index] + (
-                extract_features_from_aws_response(
-                    client.detect_faces(
-                        Image={'Bytes': io_buf.getvalue()},
-                        Attributes=['ALL']
-                    )['FaceDetails'][0]
-                )
+        analysis[index] = analysis[index] + (
+            extract_features_from_aws_response(
+                client.detect_faces(
+                    Image={'Bytes': io_buf.getvalue()},
+                    Attributes=['ALL']
+                )['FaceDetails'][0]
             )
+        )
 
     return analysis
 
@@ -239,52 +243,50 @@ def find_customer(picture: str, left: float, top: float) -> str:
     return id_table[int(top // unit)][int(left // unit)]
 
 
-def main() -> None:
-    ''''''
+def get_features_for_compare(person: list) -> tuple:
+    '''[<_io.BytesIO>, (30, 46), 'Male', ['HAPPY'], 'Smile', 'Beard']'''
+    face: bytes = person.pop(0)
+    emotion: list = person.pop(2)
+    age: tuple = person.pop(0)
+    age: str = str(int((age[0] + age[1]) / 2))  # average age
+
+    # TODO: sort "person" to the form of that the feature belongs
+    #       to the lesser customer the higher prior to compare
+    person.insert(0, age)
+    person.reverse()  # minor first
+
+    return face, emotion, person
+
+
+def find_customer_by_feature(feature, face) -> int:
     os.chdir(os.path.dirname(__file__))
-
     group_root: Path = pathlib.Path('fake_users/groups/')
-    # TODO: write the argorithm to deal with mutiple features
-    target_file: bytes = entrance_camera_handler()
-    customers: list = get_face_features(target_file)
-    # [<_io.BytesIO>, (30, 46), 'Male', ['HAPPY'], 'Smile', 'Beard']
 
-    # TODO: rewrite this block to multi-threaded to accelerate
-    if len(customers):  # If there is any faces in target
-        for person in customers:
-            customer_face: bytes = person.pop(0)
-            customer_emotion: list = person.pop(2)  # later use
-            customer_age: tuple = person.pop(0)
-            # Maybe average age is not a good idea?
-            customer_age: str = str(
-                    int((customer_age[0] + customer_age[1]) / 2)
-                    )
+    for picture in group_root.glob(feature + '/*'):
+        source_file: Path = pathlib.Path(picture).resolve()
+        face_left, face_top = compare_faces(source_file, face)
 
-            # TODO: sort "person" to the form of that the feature belongs
-            #       to the lesser customer the higher prior to compare
-            person.insert(0, customer_age)
-            person.reverse()  # minor first
+        if face_left >= 0:  # Stop iteration at first match
+            id_ = find_customer(picture, face_left, face_top)
+            return id_
 
-            customer_id: str = str()
-            for feature in person:
-                flag: bool = False  # True if confirm who is he/she
-                feature = feature.lower()  # everything in local are lower
+    return None
 
-                for picture in group_root.glob(feature + '/*'):
-                    source_file: Path = pathlib.Path(picture).resolve()
-                    face_left, face_top = compare_faces(source_file,
-                                                        customer_face)
-                    # What if customer has a twin silbin?
-                    if face_left >= 0:  # Stop iteration at first match
-                        customer_id = str(find_customer(picture,
-                                                        face_left,
-                                                        face_top))
-                        print('Welcome back! Customer', customer_id)
-                        flag = True
-                        break
 
-                if flag:
-                    break
+def main() -> None:
+    '''Recognize customer in entering.'''
+    # TODO: argorithm to deal with mutiple features
+    customers: list = get_face_features(entrance_camera_handler())
+
+    # TODO: multi-threaded for accelerating
+    for person in customers:
+        face, emotion, features = get_features_for_compare(person)
+
+        for feature in features:
+            id_ = find_customer_by_feature(feature.lower(), face)
+            if id_:
+                print('Welcome back! Customer', str(id_))
+                return None
 
     # TODO: query from database and prepare data for mobile app
 
