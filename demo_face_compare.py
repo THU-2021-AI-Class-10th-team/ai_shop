@@ -1,11 +1,13 @@
+from flask import Flask, request, jsonify
+from typing import NewType, Tuple, List
+
 import boto3
 import cv2
+import flask
 import io
 import numpy as np
 import os
 import pathlib
-
-from typing import NewType, Tuple, List
 
 
 Path = NewType('path', pathlib.Path)
@@ -190,21 +192,6 @@ def get_face_features(target: bytes) -> List[str]:
     return analysis
 
 
-def entrance_camera_handler() -> bytes:
-    '''This function simulates camera shot at entrance.
-
-    * Return value: image itself
-    '''
-#    TODO: Rewrite it to real handler that returns a binary data.
-#    TODO: It should able to deal with multiple face in one shot
-#          Take look of it:
-#          https://www.superdatascience.com/blogs/opencv-face-recognition
-    with open('fake_users/Bradley_Cooper5.jpeg', 'rb') as img_file:
-        img_data = img_file.read()
-
-    return img_data
-
-
 def find_customer(picture: str, left: float, top: float) -> str:
     '''Figure out who is the customer by the position in source image.
 
@@ -273,10 +260,14 @@ def find_customer_by_feature(feature, face) -> int:
     return None
 
 
-def main() -> None:
+app = Flask(__name__)
+
+
+@app.route('/enterance', methods=['POST'])
+def main():
     '''Recognize customer in entering.'''
     # TODO: argorithm to deal with mutiple features
-    customers: list = get_face_features(entrance_camera_handler())
+    customers: list = get_face_features(request.files['file'].read())
 
     # TODO: multi-threaded for accelerating
     for person in customers:
@@ -286,10 +277,6 @@ def main() -> None:
             id_ = find_customer_by_feature(feature.lower(), face)
             if id_:
                 print('Welcome back! Customer', str(id_))
-                return None
+                return jsonify({'Rek': 'success'})
 
     # TODO: query from database and prepare data for mobile app
-
-
-if __name__ == "__main__":
-    main()
