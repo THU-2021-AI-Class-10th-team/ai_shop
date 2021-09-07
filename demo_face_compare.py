@@ -260,23 +260,25 @@ def find_customer_by_feature(feature, face) -> int:
     return None
 
 
-app = Flask(__name__)
+def create_app():
+    app = Flask(__name__, instance_relative_config=True)
 
+    @app.route('/enterance', methods=['POST'])
+    def entrance_picture_handler():
+        '''Recognize customer in entering.'''
+        # TODO: argorithm to deal with mutiple features
+        customers: list = get_face_features(request.files['file'].read())
 
-@app.route('/enterance', methods=['POST'])
-def main():
-    '''Recognize customer in entering.'''
-    # TODO: argorithm to deal with mutiple features
-    customers: list = get_face_features(request.files['file'].read())
+        # TODO: multi-threaded for accelerating
+        for person in customers:
+            face, emotion, features = get_features_for_compare(person)
 
-    # TODO: multi-threaded for accelerating
-    for person in customers:
-        face, emotion, features = get_features_for_compare(person)
+            for feature in features:
+                id_ = find_customer_by_feature(feature.lower(), face)
+                if id_:
+                    print('Welcome back! Customer', str(id_))
+                    return jsonify({'Rek': 'success'})
 
-        for feature in features:
-            id_ = find_customer_by_feature(feature.lower(), face)
-            if id_:
-                print('Welcome back! Customer', str(id_))
-                return jsonify({'Rek': 'success'})
+        # TODO: query from database and prepare data for mobile app
 
-    # TODO: query from database and prepare data for mobile app
+    return app
