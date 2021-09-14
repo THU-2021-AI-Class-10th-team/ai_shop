@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="zh-TW" xml:lang="zh-TW">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.5, user-scalable=yes" />
+  <meta name="author" content="Zhe-Rui, Yang" />
+  <title>August 19 Member Welcome Flow</title>
+  <link rel="stylesheet" href="./css/aws-rek.css" />
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1a1a1a;
+      scroll-behavior: smooth;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 70%;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      word-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 1em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #59abf2;
+    }
+    a:visited {
+      color: #957baf;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1 { 
+      font-size: 50px;
+      margin-bottom: 50px;
+    }
+    h2, h3, h4, h5, h6 {
+      margin-top: .7em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+  }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      border-bottom: 1px solid #aaa;
+      height: 90px;
+      text-align: center;
+      padding-top: 5px;
+      padding-bottom: 1em;
+      margin: 0 auto;
+    }
+    #TOC{
+      margin: 1em auto;
+      padding: 30px;
+      background-color: #f5f5f5;
+    }
+    #TOC > h2 {
+      opacity: .7;
+    }
+
+    #TOC a {
+      color: black;
+      opacity: .7;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">August 19 Member Welcome Flow</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<h2 id="toc-title">Contents</h2>
+<ul>
+<li><a href="#門口掃描">門口掃描</a></li>
+<li><a href="#aws-比對">AWS 比對</a></li>
+<li><a href="#結帳偷照">結帳偷照</a></li>
+<li><a href="#裝置統計">裝置統計</a></li>
+<li><a href="#其他">其他</a></li>
+</ul>
+</nav>
+<span id="change-point"></span>
+<section id="門口掃描" class="level2">
+<h2>門口掃描</h2>
+<ul>
+<li>怎麼掃描？<br />
+  A：以 OpenCV 監測人類靠近（算畫面比例），若夠靠近就拍照上傳主機 <br>
+<a href="https://thedatafrog.com/en/articles/human-detection-video/">Real-time Human Detection with OpenCV</a></li>
+</ul>
+</section>
+<section id="aws-比對" class="level2">
+<h2>AWS 比對</h2>
+<ul>
+<li><p>比對照片從何而來？<br />
+A：上次結帳時偷照（流程見「結帳偷照」）</p></li>
+<li><p>怎麼比對？<br />
+A：萃取特徵分群比對（例如：男，約 30 歲，蓄鬍）</p></li>
+</ul>
+<p>收到門口照片後，先送一次 face analysis 拿特徵，根據特徵從預先分類好的會員肖像資料庫抓相關比對照片一起送出給 face comparison 比對。</p>
+<ul>
+<li>預先分類好的會員肖像資料庫從何而來？<br />
+A：結帳偷照時送去 face analysis 萃取特徵後</li>
+</ul>
+<p>若比對成功就依據先前萃取的特徵，和客戶資料庫裡的內容選出推播內容，將內容更新至手機應用端的專門伺服器。只要會員有開啟專屬應用程式，就會收到即時且個人化的廣告。</p>
+<ul>
+  <li><p>不能主動推播嗎？<br /> 
+    A：還真的不行，用戶應該要有程式的所有主控權。頂多像是通訊軟體一般跳個通知</p></li>
+<li><p>要推播什麼？<br />
+A：（暫時）從會員過去消費紀錄次數最高的前三個商品類型中，找出公司正在特惠的商品。（後續改進）加入心情、配件、星期幾等等的權重<br />
+例如：酒的心情權重 ＝（開心 0.8 、難過 0.7 、生氣 0.2 、恐慌 0.3 ）</p></li>
+<li><p>怎麼把推播送到用戶手上？<br />
+我們會有個應用程式（如之前討論的），該應用程式在開啟時會向專門伺服器請求資料。我們會利用 cookie 的技術註記該請求是哪一個會員。若該會員進店門口時有被辨認出來，則手機伺服器就會有相應的資料推送</p></li>
+</ul>
+</section>
+<section id="結帳偷照" class="level2">
+<h2>結帳偷照</h2>
+<p>若確定為會員，錄影 5 秒，每 0.5 秒截一張圖回傳</p>
+</section>
+<section id="裝置統計" class="level2">
+<h2>裝置統計</h2>
+<ul>
+<li>主伺服器<br />
+手機伺服器、兩個邊緣裝置，以及雲端裝置之間的連通</li>
+<li>邊緣裝置
+<ul>
+<li>門口攝影機 + 攝影機控制器</li>
+<li>結帳台攝影機 + 攝影機控制器</li>
+</ul></li>
+<li>手機伺服器
+<ul>
+<li>尚未動工，預定跟主伺服器共用一個特別的資料庫，可能也能跟顧客資料庫請求資料</li>
+</ul></li>
+<li>手機應用程式（不要真的寫）</li>
+<li>雲端裝置
+<ul>
+<li>Rekgnition</li>
+<li>S3 （預定，用來比對的分類照片放這邊以降低傳輸時間成本）</li>
+<li>ES2 或 Lambda （預定，用來處理辨識用的資料流）</li>
+</ul></li>
+<li>資料用什麼交流？ A：網路。因為要處理圖片（大資料流）的傳輸，選用 http 或 ftp 協定。除了雲端裝置以外其他都在內網，先不預定加密傳輸。雲端裝置的 SDK 自帶加密不須擔心。</li>
+</ul>
+</section>
+<section id="其他" class="level2">
+<h2>其他</h2>
+<ul>
+<li>怎麼知道顧客離店？（以釋放資源）<br />
+結帳，或者不知道。</li>
+</ul>
+</section>
+</body>
+</html>

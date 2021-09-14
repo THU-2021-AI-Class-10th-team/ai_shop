@@ -1,5 +1,8 @@
 # AI Shop
+
 AI shop system for AWS Rekgnition project.
+
+Time is not enough. The only thing that we demostrate here is membership recognition.
 
 # Requirements
 

@@ -1,0 +1,23 @@
+#
+# This text file is design for suckless sent
+#
+
+@title.png
+
+架構
+
+@../architecture_diagrams/devices.png
+
+@../architecture_diagrams/camera_control_flow.jpg
+
+過去
+
+未來
+
+• 流程圖
+• 伺服器架構
+• 邊緣站點
+• 資料庫
+• 手機應用程式
+
+感謝聆聽
